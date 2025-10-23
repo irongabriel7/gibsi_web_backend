@@ -35,6 +35,7 @@ To facilitate easy deployment and scalability, a pre-built arm64 Docker image of
 
 Docker Hub Repository:
 gbmultani27/gibsi_web_backend
+https://hub.docker.com/repository/docker/gbmultani27/gibsi_web_backend/
 
 Deployment Highlights
 Multi-architecture support: Image available for ARM64 devices, suitable for Raspberry Pi clusters running K3s.
