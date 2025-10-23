@@ -3,6 +3,7 @@
 AI-Driven Trading Intelligence Layer for the GIBSI Ecosystem
 
 Status: 🧩 Private Repository | 🧪 Live Testing via ngrok public tunnel
+https://crack-akita-brief.ngrok-free.app/
 
 📘 Overview
 
@@ -13,34 +14,39 @@ This backend acts as the central logic layer for GIBSI Striker, connecting the f
 Built with Flask and MongoDB, it ensures secure, modular, and scalable processing of market data for both live and simulated environments.
 
 ⚙️ Key Capabilities
-Feature	Description
-🤖 AI Signal Generation	LSTM/ML-driven trade signals derived from OHLCV & technical indicator data
-🔗 REST Endpoints	For price prediction, backtesting, and strategy parameter configuration
-📊 Data Logging	MongoDB-based trade and performance tracking
-🌐 Real-Time Integration	Secure ngrok tunnel for remote front-end access
-⚙️ Configurable Parameters	Dynamic control over AI thresholds, trading rules, and indicators
-🧱 Scalable Design	Modular Flask-based microservices supporting multiple environments
+| Feature                        | Description                                                                |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| 🤖 **AI Signal Generation**    | LSTM/ML-driven trade signals derived from OHLCV & technical indicator data |
+| 🔗 **REST Endpoints**          | Price prediction, backtesting, and strategy configuration                  |
+| 📊 **Data Logging**            | MongoDB-based trade and performance tracking                               |
+| 🌐 **Real-Time Integration**   | Secure ngrok tunnel for remote front-end access                            |
+| ⚙️ **Configurable Parameters** | Dynamic control over AI thresholds and trading rules                       |
+| 🧱 **Scalable Design**         | Modular Flask-based architecture supporting multi-environment setups       |
+
 🧰 Tech Stack
-Layer	Technology
-Framework	Flask (Python 3.11+)
-Data & ML Stack	Pandas, NumPy, TensorFlow, scikit-learn, ta (technical analysis)
-Database	MongoDB (PyMongo)
-API Layer	RESTful JSON endpoints via Flask-RESTPlus
-Documentation	Swagger / Flasgger
-Security	JWT Authentication, Flask-CORS
-Containerization	Docker, Docker Compose
-Live Testing	ngrok public tunnel
+| Layer                | Technology                                  |
+| -------------------- | ------------------------------------------- |
+| **Framework**        | Flask (Python 3.11+)                        |
+| **Data & ML Stack**  | Pandas, NumPy, TensorFlow, scikit-learn, ta |
+| **Database**         | MongoDB (PyMongo)                           |
+| **API Layer**        | RESTful JSON endpoints (Flask-RESTPlus)     |
+| **Documentation**    | Swagger / Flasgger                          |
+| **Security**         | JWT Authentication, Flask-CORS              |
+| **Containerization** | Docker, Docker Compose                      |
+| **Live Testing**     | ngrok public tunnel                         |
+
 🐳 Docker & Kubernetes Deployment
 
 The GIBSI WEB Backend ships as a multi-architecture Docker image for easy deployment on both cloud and edge infrastructures (including Raspberry Pi clusters running K3s).
 
-Deployment Target	Description
-Docker Hub	gbmultani27/gibsi_web_backend
+| Deployment Target      | Description                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Docker Hub**         | [`gbmultani27/gibsi_web_backend`](https://hub.docker.com/repository/docker/gbmultani27/gibsi_web_backend/) |
+| **Architecture**       | ARM64 compatible (Raspberry Pi, Jetson Nano, etc.)                                                         |
+| **Kubernetes Ready**   | Optimized for lightweight K3s clusters                                                                     |
+| **Continuous Updates** | Automatically pushed latest tags for development builds                                                    |
+| **Configuration**      | `.env`-based setup for ports, DB credentials, and secrets                                                  |
 
-Architecture	ARM64 compatible (Raspberry Pi, Jetson Nano, etc.)
-Kubernetes Ready	Optimized for lightweight Kubernetes clusters (K3s)
-Continuous Updates	Automatically pushed latest build tags for live development
-Environment Config	.env-based configuration for ports, DB, and secrets
 🚀 Deployment Highlights
 
 🧩 Multi-architecture builds — optimized for ARM64 and x86_64
