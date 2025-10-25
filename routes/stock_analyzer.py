@@ -1,9 +1,22 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from mongo_client import non_flask_db as db
+import pandas as pd
+import pytz
 
 
 analyzer_api = Blueprint("analyzer_api", __name__)
+
+def convert_to_ist(dt):
+    if dt is None:
+        return None
+    utc = pytz.utc
+    ist = pytz.timezone('Asia/Kolkata')
+    if dt.tzinfo is None:
+        dt = utc.localize(dt)
+    dt_ist = dt.astimezone(ist).replace(second=0, microsecond=0)
+    # return formatted string without seconds and timezone
+    return dt_ist.strftime('%Y-%m-%d %H:%M')
 
 
 @analyzer_api.route("/api/purchases_by_date", methods=["GET"])
@@ -48,16 +61,16 @@ def get_purchases_by_date():
             result.append({
                 "ticker": doc.get("ticker"),
                 "buy_price": doc.get("buy_price"),
-                "buy_time": safe_isoformat(doc.get("buy_time")),
+                "buy_time": safe_isoformat(convert_to_ist(pd.to_datetime(doc.get("buy_time")))),
                 "expected_sell_close": doc.get("expected_sell_close"),
-                "expected_sell_time": safe_isoformat(doc.get("expected_sell_time")),
+                "expected_sell_time": safe_isoformat(convert_to_ist(pd.to_datetime(doc.get("expected_sell_time")))),
                 "max_profit_pct": doc.get("max_profit_pct"),
                 "reason": doc.get("reason"),
                 "signal": doc.get("signal"),
                 "stock_id": doc.get("stock_id"),
                 "profit_pct": doc.get("profit_pct"),
                 "sell_price": doc.get("sell_price"),
-                "sell_time": safe_isoformat(doc.get("sell_time")),
+                "sell_time": safe_isoformat(convert_to_ist(pd.to_datetime(doc.get("sell_time")))),
                 "trade_signal": doc.get("trade_signal"),
             })
 
