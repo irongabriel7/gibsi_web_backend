@@ -10,28 +10,24 @@ stock_util = StockUtility("/shared/stocks_list.txt")
 
 def load_stocks_from_file(file_path="/shared/stocks_list.txt"):
     if not os.path.exists(file_path):
-        print(f"[❌] File not found: {file_path}")
-        return []
+        return {}
 
-    stocks = []
+    stock_dict = {}
     with open(file_path, "r") as f:
-        for idx, line in enumerate(f):
+        for line in f:
             line = line.strip()
-
-            # Skip empty lines and header
-            if not line or line.lower().startswith("id,ticker"):
+            if not line or line.lower().startswith("id"):
                 continue
-
+            
             parts = line.split(",")
-            if len(parts) >= 2:
-                stock_id = parts[0].strip()
-                ticker = parts[1].strip()
-                if not ticker.endswith(".NS"):
-                    ticker += ".NS"
-                stocks.append((stock_id, ticker))
-            else:
-                print(f"[⚠️] Invalid line in stocks_list.txt: {line}")
-    return stocks
+            if len(parts) >= 3:
+                try:
+                    stock_id = int(parts[0].strip())
+                    ticker = parts[2].strip()
+                    stock_dict[stock_id] = ticker
+                except ValueError:
+                    continue
+    return stock_dict
 
 
 
@@ -77,7 +73,7 @@ def get_top_gainers():
     with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_stock = {
             executor.submit(fetch_stock_profit, stock_id, ticker): (stock_id, ticker)
-            for stock_id, ticker in stocks
+            for stock_id, ticker in stocks.items()
         }
 
         for future in as_completed(future_to_stock):

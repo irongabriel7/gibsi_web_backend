@@ -21,23 +21,24 @@ def convert_to_ist(dt):
 
 def load_stocks_from_file(file_path="/shared/stocks_list.txt"):
     if not os.path.exists(file_path):
-        print(f"[❌] File not found: {file_path}")
-        return []
-    stocks = []
+        return {}
+
+    stock_dict = {}
     with open(file_path, "r") as f:
         for line in f:
             line = line.strip()
-            if not line or line.lower().startswith("id,ticker"):
+            if not line or line.lower().startswith("id"):
                 continue
+            
             parts = line.split(",")
-            if len(parts) >= 2:
-                stock_id = parts[0].strip()
-                ticker = parts[1].strip()
-                if not ticker.endswith(".NS"):
-                    ticker += ".NS"
-                stocks.append((stock_id, ticker))
-    return stocks
-
+            if len(parts) >= 3:
+                try:
+                    stock_id = int(parts[0].strip())
+                    ticker = parts[2].strip()
+                    stock_dict[stock_id] = ticker
+                except ValueError:
+                    continue
+    return stock_dict
 def fetch_latest_periodic_summaries(stock_ids, tickers):
     # Aggregation pipeline for latest entry per (stock_id, ticker)
     pipeline = [
@@ -60,7 +61,8 @@ def get_live_intraday_gainers():
         if not stocks:
             return jsonify({"stocks": []})
 
-        stock_ids, tickers = zip(*stocks)
+        # Use .items() to get (stock_id, ticker) pairs
+        stock_ids, tickers = zip(*stocks.items())
         latest_docs = fetch_latest_periodic_summaries(stock_ids, tickers)
 
         results = []

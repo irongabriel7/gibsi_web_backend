@@ -1,5 +1,6 @@
 import pandas as pd
 from flask import jsonify
+import os
 import time
 import datetime
 import pytz
@@ -8,18 +9,20 @@ from mongo_client import non_flask_db as db
 
 IST = pytz.timezone("Asia/Kolkata")
 UTC = pytz.utc
+os_holiday_file = os.getenv("HOLIDAY_FILE", "/shared/holiday.txt")
+os_stocks_file = os.getenv("STOCKS_LIST_FILE", "/shared/stocks_list.txt")
 
 class StockUtility:
     def __init__(self, stock_list_file=None):
         self.ist = pytz.timezone("Asia/Kolkata")
-        self.stock_list_file = stock_list_file or "/shared/stocks_list.txt"
+        self.stock_list_file = stock_list_file or os_stocks_file
         self.stock_df = self.load_stock_list()
 
     def get_market_start_utc(self, dt):
         # Convert any datetime to start of the trading day in UTC
         return datetime.datetime.combine(dt.date(), datetime.time(3, 45))
     
-    def is_market_closed(self, date, holiday_file="/shared/holiday.txt"):
+    def is_market_closed(self, date, holiday_file=os_holiday_file):
         # 1. Check weekend (Saturday=5, Sunday=6)
         if date.weekday() >= 5:
             return True
@@ -45,7 +48,7 @@ class StockUtility:
             reference_date -= datetime.timedelta(days=1)
         return reference_date
 
-    def is_market_day(self, date, holiday_file="/shared/holiday.txt"):
+    def is_market_day(self, date, holiday_file=os_holiday_file):
         # Check if weekend
         if date.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
             return False
@@ -61,7 +64,7 @@ class StockUtility:
         
         return True
     
-    def is_market_live(self, date, holiday_file="/shared/holiday.txt"):
+    def is_market_live(self, date, holiday_file=os_holiday_file):
         """
         Checks if the market is live:
         - Not a weekend
@@ -342,15 +345,18 @@ class StockUtility:
             print(f"[❌] Error computing intraday summary: {e}")
             return None
 
-    def load_stock_list_as_symbols(self):
+    def load_stock_list_as_symbols(self, file_path="/shared/stocks_list.txt"):
         """
-        Load stock symbols from stocks_list.txt and return as a list of symbols
-        This is the equivalent of your Flask route logic
+        Load stock symbols (ticker) from stocks_list.txt and return as a list of symbols.
+        Assumes ticker is in the 3rd column (index 2), based on previous info,
+        skipping header lines and ignoring empty lines.
         """
         try:
-            with open("/shared/stocks_list.txt", "r") as f:
+            with open(file_path, "r") as f:
+                # Skip lines starting with 'id' (case insensitive) and empty lines
                 lines = [line.strip() for line in f if line.strip() and not line.lower().startswith("id")]
-                symbols = [line.split(",")[1].strip() for line in lines if "," in line]
+                # Extract 3rd column (ticker) if line contains at least 3 columns
+                symbols = [line.split(",")[2].strip() for line in lines if len(line.split(",")) >= 3]
             return symbols
         except FileNotFoundError:
             raise FileNotFoundError("stocks_list.txt not found")
@@ -359,26 +365,25 @@ class StockUtility:
 
     def load_stock_list_as_dataframe(self):
         """
-        Load stock list from stocks_list.txt and return as a pandas DataFrame
-        This provides more flexibility for data manipulation
+        Load stock list from stocks_list.txt and return as a pandas DataFrame.
+        Properly reads all columns based on CSV header.
         """
+        
         try:
-            with open("/shared/stocks_list.txt", "r") as f:
-                lines = [line.strip() for line in f if line.strip() and not line.lower().startswith("id")]
-                
-            # Parse the data assuming format: id,symbol,name or similar
-            data = []
-            for line in lines:
-                if "," in line:
-                    parts = [part.strip() for part in line.split(",")]
-                    if len(parts) >= 2:
-                        data.append({
-                            'id': parts[0] if parts[0].isdigit() else None,
-                            'symbol': parts[1],
-                            'name': parts[2] if len(parts) > 2 else None
-                        })
+            # Use pandas CSV reader with proper NA handling for 'None' string
+            df = pd.read_csv(os_stocks_file, na_values=['None', 'NULL', 'null', ''])
             
-            return pd.DataFrame(data)
+            # Optionally convert 'ID' column to integer
+            if 'ID' in df.columns:
+                df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
+            
+            # Parse datetime columns if present
+            datetime_cols = ['End Datetime', 'Trained Datetime']
+            for col in datetime_cols:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
+            
+            return df
         except FileNotFoundError:
             raise FileNotFoundError("stocks_list.txt not found")
         except Exception as e:
@@ -438,7 +443,7 @@ class StockUtility:
         return None
 
 if __name__ == "__main__":
-    util = StockUtility("/shared/stocks_list.txt")
+    util = StockUtility(os_stocks_file)
     for _, row in util.stock_df.iterrows():
         stock_id = row['ID']
         ticker = row['Ticker']

@@ -11,16 +11,22 @@ display_chart_api = Blueprint("display_chart_api", __name__)
 def load_stocks(file_path="/shared/stocks_list.txt"):
     if not os.path.exists(file_path):
         return {}
+    
+    stock_dict = {}
     with open(file_path, "r") as f:
-        lines = [line.strip() for line in f.readlines() if line.strip()]
-        stock_dict = {}
+        lines = [line.strip() for line in f if line.strip()]
         for line in lines:
             if line.lower().startswith("id"):
                 continue
             parts = line.split(",")
-            if len(parts) >= 2:
-                stock_dict[parts[1].strip()] = int(parts[0].strip())
-        return stock_dict
+            if len(parts) >= 3:
+                try:
+                    stock_id = int(parts[0].strip())
+                    ticker = parts[2].strip()
+                    stock_dict[ticker] = stock_id
+                except ValueError:
+                    continue
+    return stock_dict
 
 STOCK_MAP = load_stocks()
 ID_TO_TICKER = {v: k for k, v in STOCK_MAP.items()}

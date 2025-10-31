@@ -15,8 +15,8 @@ from logger_config import setup_gibsi_logging
 auth_logger = setup_gibsi_logging()
 from routes.session import require_active_session
 
-JWT_SECRET_KEY = "b71f276f0c473f1074c5f454f259afc494e888f1031054d36f765d038d8376d5" #WHILE PRODUCTION NEED TO BE REMOVED
-#JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+#JWT_SECRET_KEY = "b71f276f0c473f1074c5f454f259afc494e888f1031054d36f765d038d8376d5" #WHILE PRODUCTION NEED TO BE REMOVED
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 auth_api = Blueprint('auth_api', __name__)
 

@@ -12,6 +12,8 @@ from routes.data_handler import data_handler_api
 from routes.mongo_export import mongo_export
 from routes.system_check import health_api
 from routes.stock_analyzer import analyzer_api
+from routes.config_updater import config_update_api
+from routes.model_trainer import model_trainer_api
 from routes.auth import init_auth
 from routes.notifier import notifier,init_notifier_jwt
 from stock_utility import StockUtility
@@ -42,6 +44,9 @@ app.register_blueprint(data_handler_api)
 app.register_blueprint(mongo_export)
 app.register_blueprint(health_api)
 app.register_blueprint(analyzer_api)
+app.register_blueprint(config_update_api)
+app.register_blueprint(model_trainer_api)
+
 init_notifier_jwt(app)
 app.register_blueprint(notifier)
 CORS(app)

@@ -4,8 +4,11 @@ from flask import Blueprint, jsonify, request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import psutil
 from mongo_client import non_flask_db as db
+import shutil
 
 health_api = Blueprint("health_api", __name__)
+
+TEMP_FOLDER = "/shared/temp/"
 
 # Collections
 control_collection = db.control
@@ -108,7 +111,8 @@ def get_process_statuses():
                     "stocks_fetcher_status": doc.get("stocks_fetcher_status"),
                     "trade_engine_status": doc.get("trade_engine_status"),
                     "model_training_status": doc.get("model_training_status"),
-                    "status": doc.get("status")
+                    "status": doc.get("status"),
+                    "percent": doc.get("percent", 0)
                 }
             else:
                 status_map[flag] = {"status": doc.get("status")}
@@ -159,6 +163,7 @@ def change_process_status(flagname):
     Change the status of a process by flagname.
     Expects JSON body: { "status": "<start|pause|stop|restart>" }
     If flag doesn't exist, creates it automatically.
+    Returns updated status message and current percent if applicable.
     """
     valid_flagnames = ["stocks_fetcher", "trade_engine", "model_trainer", "notifier"]
     valid_statuses = ["start", "pause", "stop", "restart"]
@@ -175,18 +180,95 @@ def change_process_status(flagname):
         return jsonify({"error": f"Invalid status '{status}'. Must be one of {valid_statuses}"}), 400
 
     try:
-        # Update existing or create if missing
-        update_result = control_collection.update_one(
+        # Update document status field, upsert if needed
+        control_collection.update_one(
             {"flagname": flagname},
             {"$set": {"status": status}},
             upsert=True
         )
+        # After update, retrieve document including "percent" field if available
+        doc = control_collection.find_one({"flagname": flagname}, {"percent": 1, "_id": 0})
+        percent_value = doc.get("percent") if doc else None
 
         message = f"Status for '{flagname}' updated to '{status}'"
-        if update_result.upserted_id:
-            message += " (new flag created)"
 
-        return jsonify({"message": message})
+        response = {"message": message}
+        if percent_value is not None and flagname == "model_trainer":
+            response["percent"] = percent_value
+
+        return jsonify(response)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@health_api.route("/api/control/new_trainer", methods=["GET"])
+def get_new_trainer_flag():
+    flag = control_collection.find_one({"flagname": "new_trainer"})
+    if not flag:
+        # Create default flag document
+        flag = {
+            "flagname": "new_trainer",
+            "status": "stop",
+            "flagvalue": False,
+            "percent": 0,
+            "description": "Controls weekend training status and progress"
+        }
+        control_collection.insert_one(flag)
+    # Serialize _id for JSON response
+    flag["_id"] = str(flag["_id"])
+    return jsonify(flag)
+
+
+@health_api.route("/api/control/new_trainer", methods=["POST"])
+def update_new_trainer_flag():
+    data = request.get_json()
+    status = data.get("status")
+    flagvalue = data.get("flagvalue")
+    percent = data.get("percent")
+
+    if status not in ["start", "stop"]:
+        return jsonify({"error": "Invalid status value"}), 400
+    if not isinstance(flagvalue, bool):
+        return jsonify({"error": "flagvalue must be boolean"}), 400
+    if percent is not None and (not isinstance(percent, int) or not 0 <= percent <= 100):
+        return jsonify({"error": "percent must be int in [0,100]"}), 400
+
+    update_doc = {
+        "status": status,
+        "flagvalue": flagvalue,
+    }
+    if percent is not None:
+        update_doc["percent"] = percent
+
+    control_collection.update_one(
+        {"flagname": "new_trainer"},
+        {"$set": update_doc},
+        upsert=True
+    )
+    return jsonify({"success": True, "message": "new_trainer flag updated"})
+
+@health_api.route("/api/temp/check", methods=["GET"])
+def check_temp_folder():
+    try:
+        files = os.listdir(TEMP_FOLDER)
+        has_files = len(files) > 0
+        return jsonify({"success": True, "has_files": has_files})
+    except Exception as e:
+        print(f"Error checking temp folder: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@health_api.route("/api/temp/clear", methods=["POST"])
+def clear_temp_folder():
+    try:
+        if os.path.exists(TEMP_FOLDER):
+            for filename in os.listdir(TEMP_FOLDER):
+                file_path = os.path.join(TEMP_FOLDER, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+        return jsonify({"success": True, "message": "Temp folder cleared."})
+    except Exception as e:
+        print(f"Error clearing temp folder: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
